@@ -1,0 +1,327 @@
+﻿
+int ShapeMatrix[16]={0xFFFF,0xFFFF,0xFFFF,0xFFFF,0xFFFF,0xFFFF,0xFFFF,0xFFFF,0xFFFF,0xFFFF,0xFFFF,0xFFFF,0xFFFF,0xFFFF,0xFFFF,0xFFFF};
+char n=0;
+int n=0;
+
+void interrupt(void)
+{
+	n ++;
+	n = n % 16;
+	
+
+
+	
+if (n==0){
+PORTDbits.RD2 = 1;
+}	else 	{PORTDbits.RD2 = 0;
+}
+
+	if (n==1){
+PORTDbits.RD3 = 1;
+}	else 	{PORTDbits.RD3 = 0;
+}
+
+	if (n==2){
+PORTCbits.RC4 = 1;
+}	else 	{PORTCbits.RC4 = 0;
+}
+
+	if (n==3){
+PORTCbits.RC5 = 1;
+}	else 	{PORTCbits.RC5 = 0;
+}
+	
+if (n==4){
+PORTCbits.RC6 = 1;
+}	else 	{PORTCbits.RC6 = 0;
+}
+
+	if (n==5){
+PORTCbits.RC7 = 1;
+}	else 	{PORTCbits.RC7 = 0;
+}
+
+	if (n==6){
+PORTDbits.RD4 = 1;
+}	else 	{PORTDbits.RD4 = 0;
+}
+
+	if (n==7){
+PORTDbits.RD5 = 1;
+}	else 	{PORTDbits.RD5 = 0;
+}
+
+	if (n==8){
+PORTDbits.RD6 = 1;
+}	else 	{PORTDbits.RD6 = 0;
+}
+
+	if (n==9){
+PORTDbits.RD7 = 1;
+}	else 	{PORTDbits.RD7 = 0;
+}
+
+	if (n==10){
+PORTBbits.RB0 = 1;
+}	else 	{PORTBbits.RB0 = 0;
+}
+
+	if (n==11){
+PORTBbits.RB1 = 1;
+}	else 	{PORTBbits.RB1 = 0;
+}
+	
+if (n==12){
+PORTBbits.RB2 = 1;
+}	else 	{PORTBbits.RB2 = 0;
+}
+
+	if (n==13){
+PORTBbits.RB3 = 1;
+}	else 	{PORTBbits.RB3 = 0;
+}
+
+	if (n==14){
+PORTBbits.RB4 = 1;
+}	else 	{PORTBbits.RB4 = 0;
+}
+	
+if (n==15){
+PORTBbits.RB5 = 1;
+}	else 	{PORTBbits.RB5 = 0;
+}
+
+	
+	
+    
+	
+if ShapeMatrix[n] & 0x8000 )	{
+PORTDbits.RD1 = 1;
+}	else 	{PORTDbits.RD1 = 0;
+}
+
+	
+	if ShapeMatrix[n] & 0x4000 )	{
+PORTDbits.RD0 = 1;
+}
+	else	{PORTDbits.RD0 = 0;
+}
+
+	
+	
+if ShapeMatrix[n] & 0x2000 )	{
+PORTCbits.RC3 = 1;
+}	else	{PORTCbits.RC3 = 0;
+}
+	if ShapeMatrix[n] & 0x1000 )	{
+PORTCbits.RC2 = 1;
+}
+	else 	{PORTCbits.RC2 = 0;}
+	if ShapeMatrix[n] & 0x0800 )	{
+PORTCbits.RC1 = 1;}	else	{PORTCbits.RC1 = 0;
+}
+
+
+	if ShapeMatrix[n] & 0x0400 )	{
+PORTCbits.RC0 = 1;}	else	{PORTCbits.RC0 = 0;
+}
+
+
+	if ShapeMatrix[n] & 0x0200 )	{
+PORTAbits.RA6 = 1;
+}
+	else	{PORTAbits.RA6 = 0;
+}
+
+
+	if ShapeMatrix[n] & 0x0100 )	{
+PORTAbits.RA7 = 1;
+}	else	{PORTAbits.RA7 = 0;
+}
+
+
+	if ShapeMatrix[n] & 0x0080 )	{
+PORTEbits.RE2 = 1;
+}	else	{
+PORTEbits.RE2 = 0;}
+	if ShapeMatrix[n] & 0x0040 )	{
+PORTEbits.RE1 = 1;
+}
+	else	{
+PORTEbits.RE1 = 0;}
+
+
+	if ShapeMatrix[n] & 0x0020 )	{
+PORTEbits.RE0 = 1;
+}
+	else	{
+PORTEbits.RE0 = 0;}
+
+
+	if ShapeMatrix[n] & 0x0010 )	{
+PORTAbits.RA5 = 1;}	else	{
+PORTAbits.RA5 = 0;}
+
+
+	if ShapeMatrix[n] & 0x0008 )	{
+PORTAbits.RA3 = 1;
+}	else	{
+PORTAbits.RA3 = 0;}
+
+	
+	if ShapeMatrix[n] & 0x0004 )	{
+PORTAbits.RA2 = 1;}
+	else	{
+PORTAbits.RA2 = 0;}
+
+	
+	if ShapeMatrix[n] & 0x0002 )	{
+PORTAbits.RA1 = 1;}	else	{
+PORTAbits.RA1 = 0;}
+
+
+	if ShapeMatrix[n] & 0x0001 )	{
+PORTAbits.RA0 = 1;}	else	{PORTAbits.RA0 = 0;}
+
+	
+	
+	PIR1 = 0;		
+
+}
+
+
+void main (void)
+{
+	int i =0;	
+	T2CON = 0b00001111;
+	PR2= 156;
+	INTCON = 0b11000000;
+	PIE1 = 0b00000010;
+	
+//smiley1
+
+ShapeMatrix[0]=0x0;
+ShapeMatrix[1]=0x3C0;
+ShapeMatrix[2]=0xFF0;
+ShapeMatrix[3]=0x1FF8;
+ShapeMatrix[4]=0x3DBC;
+ShapeMatrix[5]=0x3DBC;
+ShapeMatrix[6]=0x7DBE;
+ShapeMatrix[7]=0x7FFE;
+ShapeMatrix[8]=0x7FFE;
+ShapeMatrix[9]=0x77EE;
+ShapeMatrix[10]=0x381C;
+ShapeMatrix[11]=0x3FFC;
+ShapeMatrix[12]=0x1FF8;
+ShapeMatrix[13]=0xFF0;
+ShapeMatrix[14]=0x3C0;
+ShapeMatrix[15]=0x0;
+
+	for (i=0;i<1000000;i++);i=0;	//delay bourin
+
+//smiley2
+
+ShapeMatrix[0]=0x0;
+ShapeMatrix[1]=0x3C0;
+ShapeMatrix[2]=0xFF0;
+ShapeMatrix[3]=0x1FF8;
+ShapeMatrix[4]=0x399C;
+ShapeMatrix[5]=0x399C;
+ShapeMatrix[6]=0x799E;
+ShapeMatrix[7]=0x7FFE;
+ShapeMatrix[8]=0x7FFE;
+ShapeMatrix[9]=0x700E;
+ShapeMatrix[10]=0x381C;
+ShapeMatrix[11]=0x3FFC;
+ShapeMatrix[12]=0x1FF8;
+ShapeMatrix[13]=0xFF0;
+ShapeMatrix[14]=0x3C0;
+ShapeMatrix[15]=0x0;
+
+	for (i=0;i<1000000;i++);i=0;	//delay bourin
+
+//gros coeur
+
+ShapeMatrix[0]=0x0;
+ShapeMatrix[1]=0x3C3C;
+ShapeMatrix[2]=0x7E7E;
+ShapeMatrix[3]=0xFFFF;
+ShapeMatrix[4]=0xFFFF;
+ShapeMatrix[5]=0xFFFF;
+ShapeMatrix[6]=0xFFFF;
+ShapeMatrix[7]=0xFFFF;
+ShapeMatrix[8]=0x7FFE;
+ShapeMatrix[9]=0x3FFC;
+ShapeMatrix[10]=0x1FF8;
+ShapeMatrix[11]=0xFF0;
+ShapeMatrix[12]=0x7E0;
+ShapeMatrix[13]=0x3C0;
+ShapeMatrix[14]=0x180;
+ShapeMatrix[15]=0x180;
+
+	for (i=0;i<1000000;i++);i=0;	//delay bourin
+
+//	moyen coeur
+	
+ShapeMatrix[0]=0x0;	
+ShapeMatrix[1]=0x0;	
+ShapeMatrix[2]=0x3C3C;	
+ShapeMatrix[3]=0x7E7E;	
+ShapeMatrix[4]=0x7FFE;	
+ShapeMatrix[5]=0x7FFE;	
+ShapeMatrix[6]=0x7FFE;	
+ShapeMatrix[7]=0x7FFE;	
+ShapeMatrix[8]=0x3FFC;	
+ShapeMatrix[9]=0x1FF8;	
+ShapeMatrix[10]=0xFF0;	
+ShapeMatrix[11]=0x7E0;	
+ShapeMatrix[12]=0x3C0;	
+ShapeMatrix[13]=0x180;	
+ShapeMatrix[14]=0x0;	
+ShapeMatrix[15]=0x0;	
+
+	for (i=0;i<1000000;i++);i=0;	//delay bourin
+
+//	bebe coeur
+	
+ShapeMatrix[0]=0x0;	
+ShapeMatrix[1]=0x0;	
+ShapeMatrix[2]=0x3C3C;	
+ShapeMatrix[3]=0x7E7E;	
+ShapeMatrix[4]=0x7FFE;	
+ShapeMatrix[5]=0x7FFE;	
+ShapeMatrix[6]=0x7FFE;	
+ShapeMatrix[7]=0x7FFE;	
+ShapeMatrix[8]=0x3FFC;	
+ShapeMatrix[9]=0x1FF8;	
+ShapeMatrix[10]=0xFF0;	
+ShapeMatrix[11]=0x7E0;	
+ShapeMatrix[12]=0x3C0;	
+ShapeMatrix[13]=0x180;	
+ShapeMatrix[14]=0x0;	
+ShapeMatrix[15]=0x0;	
+
+	for (i=0;i<1000000;i++);i=0;	//delay bourin
+
+//	bebe0 coeur
+	
+ShapeMatrix[0]=0x0;	
+ShapeMatrix[1]=0x0;	
+ShapeMatrix[2]=0x3C3C;	
+ShapeMatrix[3]=0x7E7E;	
+ShapeMatrix[4]=0x7FFE;	
+ShapeMatrix[5]=0x7FFE;	
+ShapeMatrix[6]=0x7FFE;	
+ShapeMatrix[7]=0x7FFE;	
+ShapeMatrix[8]=0x3FFC;	
+ShapeMatrix[9]=0x1FF8;	
+ShapeMatrix[10]=0xFF0;	
+ShapeMatrix[11]=0x7E0;	
+ShapeMatrix[12]=0x3C0;	
+ShapeMatrix[13]=0x180;	
+ShapeMatrix[14]=0x0;	
+ShapeMatrix[15]=0x0;	
+
+	for (i=0;i<1000000;i++);i=0;	//delay bourin
+
+}

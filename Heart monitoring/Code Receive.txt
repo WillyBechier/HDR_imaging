@@ -1,0 +1,173 @@
+#include <math.h>
+#include <Diolib.h>
+#include <UrtLib.h>
+#include <WdtLib.h>
+#include <radioeng.h>
+#include <string.h>
+#include <stdio.h>
+#include <ADuCRF101.H>
+#define VAR_LENGTH 0
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////   V A R I A B L E     E T     B U F F E R    //////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////			
+
+	uint16_t      Ind_Four=0;           				// Indice du buffer Fourier
+  uint8_t       Ind_Buff=0;                   // Indice du buffer R et IR
+	
+	uint8_t				Compteur=0;										// Compteur Timer
+	uint8_t				Timer=0;											// Timer Display
+	uint16_t			valeurBPM=1;									// Rythme cardiaque en BPM
+	
+	
+	float				  Freq_Ech=20.0;								// frequence de reception
+  float         pi=3.1415;                    // Pi=3.14
+	float 				Amp_RC=0.0;										// Amplitude du Pic Fourier
+  float 				RythmCard=0.0;  							// Rythme Cardiaque
+	float					Taux_Ox=0.0;									// Taux d'oxygenation
+
+	float       	Buffer_Cos[50];        	    	// Coef fourier Cos
+  float       	Buffer_Sin[50];      	      	// Coef fourier Sin
+  float					Buffer_Four[50];							// Amplitude Fourier
+	
+	uint16_t      Int_rec0=0;                   // On reconstitue l'Int Envoyé et Recu ( R)
+  uint16_t			Int_rec1=0;										// On reconstitue l'Int Envoyé et Recu (IR)
+	
+  uint16_t      Buffer_IR[200];               // Buffer data Infra Rouge 200 ( valeur traitée )
+  uint16_t      Buffer_R[200];                // Buffer data Rouge			 200 ( valeur traitée )
+	
+	uint16_t      BufferInter_IR[200];          // Buffer data Infra Rouge 200 ( file d'attente )
+  uint16_t      BufferInter_R[200];           // Buffer data Rouge			 200 ( file d'attente )
+	
+  uint16_t			Aire_R=0;											// Aire rouge
+  uint16_t			Aire_IR=0;										// Aire infra rouge
+	uint8_t       Buffer_rec[4];                // On récupere 1'Int sur un buffer 2 cases pour les 2 octets de l'int
+ 
+ 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////   D E B U T    D U    M A I N   /////////////////////////////////////////////////////////////////  
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	int main(void)	
+{ 
+	
+	unsigned char nLen, szTemp[64], i;
+	
+	RIE_U8        PktLen;                                                                         // PktLen = 2 du coup.On recoit 2 octets
+  RIE_S8        RSSI;                                                                           // RSSI ... puissance, on garde c'est tout
+
+  RIE_Responses RIE_Response = RIE_Success;                                                     // Etat initial transmission OK
+  WdtGo(T3CON_ENABLE_DIS);                                                                      // No flag
+
+  UrtLinCfg(0,19200,COMLCR_WLS_8BITS,COMLCR_STOP_DIS);                                          // Config UART
+  DioCfg(pADI_GP1,0x9);                                                                         // UART functionality on P1.0\P1.1
+
+  DioCfg(pADI_GP4,0x10);                                                                        // P4.2  as output
+  DioOen(pADI_GP4, BIT2);                                                                       // Output LED
+	
+  if (RIE_Response == RIE_Success)     RIE_Response = RadioInit(DR_38_4kbps_Dev20kHz);        	// Initialise the Radio
+  if (RIE_Response == RIE_Success)     RIE_Response = RadioSetFrequency(915000000);           	// Set the Frequency to operate at 915 MHz
+  
+	for (Ind_Buff = 0; Ind_Buff < 200; Ind_Buff++)		Buffer_R[Ind_Buff] =0;											// Initialise tout le Buffer_R a 0
+	for (Ind_Buff = 0; Ind_Buff < 200; Ind_Buff++)		Buffer_IR[Ind_Buff] =0;											// Initialise tout le Buffer_IR a 0
+	for (Ind_Four = 0; Ind_Four < 50; Ind_Four++)		Buffer_Cos[Ind_Four] =0.0;										// Initialise tout le Buffer_Cos a 0
+	for (Ind_Four = 0; Ind_Four < 50; Ind_Four++)		Buffer_Sin[Ind_Four] =0.0;										// Initialise tout le Buffer_Sin a 0
+	for (Ind_Four = 0; Ind_Four < 50; Ind_Four++)		Buffer_Four[Ind_Four] =0.0;										// Initialise tout le Buffer_Four a 0
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////   D E B U T    D U    W H I L E 1 ///////////////////////////////////////////////////////////////  
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+  while (1)
+{
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////   D E B U T    D E     F F T   //////////////////////////////////////////////////////////////////  
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////			
+
+	Compteur=0; 							// Initialise le compteur : Patientez 8 secondes
+	Timer=8;									// Initialise le compteur affiché, à 8secondes
+	Amp_RC=0.0;								// Mise à zero de l'amplitude max de la FFT
+	RythmCard=0.0;						// Mise à zero du rythme cardiaque correspondant
+
+	
+	
+	sprintf ( (char*)szTemp, "\nSpectrum Analysis\tWait for 8s\n");
+	nLen = strlen((char*)szTemp);for (i = 0 ; i < nLen ; i++ ){while(!(COMLSR_THRE==(UrtLinSta(0) & COMLSR_THRE))){};UrtTx(0, szTemp[i]);}
+	
+
+		
+	for (Ind_Four = 0; Ind_Four <50; Ind_Four++) {																																// 50 Start : Parcourt le Buffer fourier
+
+		for (Ind_Buff = 0; Ind_Buff <200; Ind_Buff++) {																															// Parcourt le Buffer Rouge
+				Buffer_Cos[Ind_Four] = Buffer_Cos[Ind_Four]+Buffer_R[Ind_Buff]* cos(2*pi/200 * Ind_Four * Ind_Buff);		// Coef fourier Cos
+				Buffer_Sin[Ind_Four] = Buffer_Sin[Ind_Four]+Buffer_R[Ind_Buff]* sin(2*pi/200 * Ind_Four * Ind_Buff);		// Coef fourier Sin
+
+				
+		if (Ind_Buff % 55 == 0){																																				// Capte tous les 1/20e de seconde
+				DioTgl(pADI_GP4,BIT2);  
+			
+				if (RIE_Response == RIE_Success)
+				RIE_Response =  RadioRxPacketFixedLen(4);              																			// Prepare a la recuperation d'une donnee
+				while (!RadioRxPacketAvailable() ){}																												// Verifie qu'un paquet soit dispo
+				if (RIE_Response == RIE_Success)                                                            // Check if Transmission OK
+				RIE_Response = RadioTerminateRadioOp();																											// Active la transmission
+				if (RIE_Response == RIE_Success)                                                            // Check if Transmission OK
+				RIE_Response = RadioRxPacketRead(4, &PktLen, &Buffer_rec[0], &RSSI);                        // Récupère l'int en RF et la stock
+				if (RIE_Response == RIE_Success)                                                            // Check if Transmission OK
+				Int_rec0 = 256*Buffer_rec[0] + Buffer_rec[1];                                               // Reconstruit l'int depuis les 2 octets de Data0
+				Int_rec1 = 256*Buffer_rec[2] + Buffer_rec[3]; 																							// Reconstruit l'int depuis les 2 octets de Data1
+				BufferInter_R[Ind_Four*4+Ind_Buff/55] =Int_rec0;																						// Données numéro paire => Données Rouges       (100-20)+I=80+I
+				BufferInter_IR[Ind_Four*4+Ind_Buff/55]=Int_rec1;																						// Données numéro paire => Données Infra-Rouges (100-20)+I=80+I
+				
+				//sprintf ( (char*)szTemp, "\r\t Indice_=%d \t\t\t BufferInter_R_=%d\n",Ind_Four*4+toto,BufferInter_R[Ind_Buff]);
+				//nLen = strlen((char*)szTemp);for (i = 0 ; i < nLen ; i++ ){while(!(COMLSR_THRE==(UrtLinSta(0) & COMLSR_THRE))){};UrtTx(0, szTemp[i]);}
+				DioTgl(pADI_GP4,BIT2);  
+			}}
+		
+			
+		Buffer_Four[Ind_Four] = pow(pow(Buffer_Sin[Ind_Four],2)+pow(Buffer_Cos[Ind_Four],2),0.5)/100; 								// Spectre(module du complexe fou_cos + i*fou_sin)
+		
+			if ((Amp_RC<Buffer_Four[Ind_Four]) & (Ind_Four!=0))	{
+			RythmCard=Freq_Ech*Ind_Four/(2*100);																											// Fréquences obtenues entre 0 et Fe/5=4Hz
+			Amp_RC = Buffer_Four[Ind_Four];
+			//sprintf ( (char*)szTemp, "\n\r RythmCard= %f",RythmCard);
+			//nLen = strlen((char*)szTemp);for (i = 0 ; i < nLen ; i++ ){while(!(COMLSR_THRE==(UrtLinSta(0) & COMLSR_THRE))){};UrtTx(0, szTemp[i]);}
+		}
+					
+		Compteur=Compteur+1;
+		if(Compteur==6){
+			  Timer=Timer-1;
+			  sprintf ( (char*)szTemp, "\r%d   ",Timer);
+			  nLen = strlen((char*)szTemp);for (i = 0 ; i < nLen ; i++ ){while(!(COMLSR_THRE==(UrtLinSta(0) & COMLSR_THRE))){};UrtTx(0, szTemp[i]);}
+			  Compteur=0;}}	
+
+				
+	valeurBPM=(RythmCard)*60;		
+	if (Aire_R==0)	{Taux_Ox=0.0;}
+	else Taux_Ox=100*Aire_IR/Aire_R;	//if (Taux_Ox>100) {Taux_Ox=100.0;}
+				
+	sprintf ( (char*)szTemp, "\n\n\n\r\t\t\t\t Taux d'oxygenation= %f \t\t Rythme Cardiaque= %d BPM\n\n\n\r",Taux_Ox,valeurBPM);
+	nLen = strlen((char*)szTemp);for (i = 0 ; i < nLen ; i++ ){while(!(COMLSR_THRE==(UrtLinSta(0) & COMLSR_THRE))){};UrtTx(0, szTemp[i]);}
+	
+		
+	for (Ind_Four = 0; Ind_Four < 50; Ind_Four++)		Buffer_Cos[Ind_Four] =0.0;										// Remise a 0 tout le Buffer_Cos
+	for (Ind_Four = 0; Ind_Four < 50; Ind_Four++)		Buffer_Sin[Ind_Four] =0.0;										// Remise a 0 tout le Buffer_Sin
+	
+	for (Ind_Buff = 0; Ind_Buff < 200; Ind_Buff++) 	Buffer_R[Ind_Buff] =BufferInter_R[Ind_Buff];	// Bascule valeurs acquises en attente vers les valeurs traitées																															// Données numéro paire => Données Rouges       (100-20)+I=80+I
+	for (Ind_Buff = 0; Ind_Buff < 200; Ind_Buff++) 	Buffer_IR[Ind_Buff]=BufferInter_IR[Ind_Buff];	// Bascule valeurs acquises en attente vers les valeurs traitées																														// Données numéro paire => Données Infra-Rouges (100-20)+I=80+I
+
+	Aire_R=0;																																											// Remise à zero
+	Aire_IR=0;																																										// Remise à zero
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////   F I N    D U    W H I L E 1 ///////////////////////////////////////////////////////////////////  
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+}            
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////   F I N     D U    M A I N   ///////////////////////////////////////////////////////////////////  
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+

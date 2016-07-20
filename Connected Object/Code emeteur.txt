@@ -1,0 +1,142 @@
+/**
+ *****************************************************************************
+   @example  transmit.c
+   @brief    Demonstrate the use of the Radio Inteface Engine to transmit
+             a fixed or variable length packet. 
+             For use with receive.c
+
+             Note that VAR_LENGTH must have the same value in transmit.c and receive.c
+
+   @version  V0.2
+   @author   PAD CSE group
+   @date     February 2013 
+
+   @par Revision History:
+   - V0.1, February 2012: initial version. 
+   - V0.2, February 2013: added option for variable length packet      
+
+All files for ADuCRF101 provided by ADI, including this file, are
+provided  as is without warranty of any kind, either expressed or implied.
+The user assumes any and all risk from the use of this code.
+It is the responsibility of the person integrating this code into an application
+to ensure that the resulting application performs as required and is safe.
+
+**/
+#include "include.h"
+
+#define VAR_LENGTH 0
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////   D E L A Y    /////////////////////////////////////////////////////////////////////////////  
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
+
+
+void Delay50ms(void)
+{
+   volatile long iDelay = 0x0EF00; //10Hz !!!!					 //20Hz de données //delay 100ms
+
+   while (iDelay--);
+}
+void DelayPilotage(void)
+{
+   volatile long iDelay = 0x00018; //30kHz !!!!					0x00370 <=> 1kHz <=> 1ms
+
+   while (iDelay--);
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////   I N I T I A L I S A T I O N   //////////////////////////////////////////////////////////////  
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+int main(void)
+{ 
+	unsigned char 				nLen, szTemp[64];
+	uint16_t							i;
+  uint16_t              Data[2];                                                        // Data
+  uint8_t               Bouton;                                                      		// Bouton de remise à zero
+  uint8_t               Buffer_Send[4];                                                 // Buffer avec MSB et LSB
+  RIE_Responses         RIE_Response = RIE_Success;                                     // Initialise la transmission a OK
+
+  unsigned char         Buffer_Channel[2]={ADCCFG_CHSEL_ADC0, ADCCFG_CHSEL_ADC1};       // Buffer avec les deux Canaux ( ADC0=>IR; ADC1=>R )
+  uint8_t               Ind_Channel;                                                    // Indice de canal : 0 ou 1
+  uint8_t               Max_Channel=2;                                                  // Nombre de canal : 2
+    
+  WdtGo(T3CON_ENABLE_DIS);                                                              // Pas d'interruption
+  
+	DioCfg(pADI_GP4, 0x10); //pour tester les 20 HZ                                     	// Port P4 configuration
+  DioOen(pADI_GP4, BIT2);// pour tester les 20Hz																				// P4.0 et 4  as output
+
+	//DioOen(pADI_GP4, BIT0|BIT2|BIT4);																										// P4.0 et 4  as output (verif freq  pilotage)
+	//DioTgl(pADI_GP4,BIT4);                                                            	// Port 0 et 4 en opposition de phase  
+	
+
+		
+  UrtLinCfg(0, 19200, COMLCR_WLS_8BITS, COMLCR_PEN_DIS);                                // Confi Uart
+  DioCfg(pADI_GP1,0x9);                                                                 // Port 1 configured for UART
+	
+	
+	AdcPd(ADCCON_ENABLE_EN);       // Enable ADC and reference
+	AdcInit(ADCCON_REFBUF_EN,  ADCCON_IEN_DIS, ADCCON_DMA_DIS);  // Enable reference buffer  
+	
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////   I N I T I A L I S A T I O N      R A D I O  ////////////////////////////////////////////////////////  
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
+  WdtGo(T3CON_ENABLE_DIS);
+  
+  if (RIE_Response == RIE_Success) RIE_Response = RadioInit(DR_38_4kbps_Dev20kHz);              // Initialise the Radio  
+  if (RIE_Response == RIE_Success) RIE_Response = RadioSetFrequency(915000000);                 // Set the Frequency to operate at 915 MHz
+  if (RIE_Response == RIE_Success) RIE_Response = RadioTxSetPA(DifferentialPA,PowerLevel15);    // Set the PA and Power Level
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////   D E B U T    D U    W H I L E 1 ///////////////////////////////////////////////////////////////  
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  while (1)
+  {
+	
+      AdcCfg(Buffer_Channel[0],ADCCFG_REF_LVDD,ADCCFG_CLK_FCOREDIV4,ADCCFG_ACQ_8); 			// Configuration du Canal 0
+			AdcCnv(ADCCON_MOD_SOFT,ADCCON_START); 																						// start software conversion
+			while (!AdcSta()) {}		 		  																										// wait for conversion to complete
+   		Data[0] =AdcRd(0); 																																// Lecutre du Canal0 => Data0                                                     
+      Buffer_Send[0] = Data[0]/256;                                                     // Decoupe les MSB de la Data0
+      Buffer_Send[1] = Data[0]%256;                                                     // Decoupe les LSB de la Data0
+		
+				
+			AdcCfg(Buffer_Channel[1],ADCCFG_REF_LVDD,ADCCFG_CLK_FCOREDIV4,ADCCFG_ACQ_8); 			// Configuration du Canal 1
+			AdcCnv(ADCCON_MOD_SOFT,ADCCON_START); 																						// start software conversion
+			while (!AdcSta()) {}		 		  																										// wait for conversion to complete	
+			Data[1] =AdcRd(0); 																																// Lecutre du Canal1 => Data1  				
+			Buffer_Send[2] = Data[1]/256;                                                     // Decoupe les MSB de la Data1
+      Buffer_Send[3] = Data[1]%256;                                                     // Decoupe les LSB de la Data1
+
+		sprintf ( (char*)szTemp, "Valeur0 = %d\t\t Valeur1 : %d\r\n", Data[0], Data[1]);		// Places string into szTemp                          
+		nLen = strlen((char*)szTemp);																												// Longueur de szTemp
+		for (i = 0 ; i < nLen ; i++ )																												// Pour toute le buffer szTemp
+		{
+    while(!(COMLSR_THRE==(UrtLinSta(0) & COMLSR_THRE)));																// Imprime le printf
+    UrtTx(0, szTemp[i]);
+		}
+		
+      RIE_Response = RadioTxPacketFixedLen(4, &Buffer_Send[0] );                      	// Emet les MSB puis les LSB
+ 
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////  D E B U T    P I L O T A G E ///////////////////////////////////////////////////////////////////  
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//			for ( i=0;i<520;i++)	
+//			{	DioTgl(pADI_GP4,BIT0|BIT4);                                                            // Change l'état de la LED  
+//				DelayPilotage();}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////   F I N    D U    P I L O T A G E   ////////////////////////////////////////////////////////////////  
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			      
+			DioTgl(pADI_GP4,BIT2);                                                     		// vérifier les 20 Hz  donnée => 10Hz oscillo
+			Delay50ms();																																	// Acquisition et Envoi 20Data/s <=> 50ms
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////   F I N    D U    W H I L E 1 ///////////////////////////////////////////////////////////////////  
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  }
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////   F I N     D U    M A I N   ///////////////////////////////////////////////////////////////////  
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+}
+
